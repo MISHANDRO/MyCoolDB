@@ -4,8 +4,11 @@
 
 class ResultSet : public Table {
 public:
-    explicit ResultSet(const std::vector<std::pair<std::string, std::string>>& columns)
-        : Table(columns)
+
+    ResultSet() = default;
+
+    explicit ResultSet(Table& table, const SqlQuery& sql)
+        : Table(table, sql)
     {}
 
     bool Next() {
@@ -13,20 +16,22 @@ public:
     }
 
     template<typename T>
-    T Get(const std::string& columnName) {
+    Element<T> Get(const std::string& columnName) {
         if (cur_ == SIZE_MAX) {
             ++cur_;
         }
 
         if (cur_ >= Count()) {
-            return T();
+            return Element<T>();
         }
 
-        for (const auto& column : columns_) {
-            if (column->GetName() == columnName) {
-                return static_cast<Column<T>*>(column.get())[cur_];
+        for (const auto& [name, column] : columns_) {
+            if (name == columnName) {
+                return static_cast<Column<T>*>(column.get())->At(cur_);
             }
         }
+
+        return Element<T>();
     }
 
 private:

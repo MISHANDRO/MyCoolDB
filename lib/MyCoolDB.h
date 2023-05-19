@@ -17,37 +17,46 @@ public:
         SqlQuery sql(request);
 
         switch (sql.Type()) {
-            case SqlQuery::RequestType::Create:
-                tables_["table_name"] = std::make_unique<Table>(sql);
+            case SqlQuery::RequestType::Create: {
+                tables_[sql.GetTableName()] = std::make_unique<Table>(sql, tables_);
                 break;
+            }
 
             case SqlQuery::RequestType::Drop:
-                tables_["table_name"].reset();
-                tables_.erase("table_name");
-                break;
-
-            case SqlQuery::RequestType::Select:
-                //// TODO возвращаем ResultSet
+                tables_[sql.GetTableName()].reset();
+                tables_.erase(sql.GetTableName());
                 break;
 
             case SqlQuery::RequestType::Update:
-                //// TODO
+                tables_[sql.GetTableName()]->UpdateRow(sql);
                 break;
 
             case SqlQuery::RequestType::Insert:
-                //// TODO
+                tables_[sql.GetTableName()]->AddRow(sql);
                 break;
 
             case SqlQuery::RequestType::Delete:
-                //// TODO
+                tables_[sql.GetTableName()]->DeleteRow(sql);
                 break;
 
+//            case SqlQuery::RequestType::None:
+//            default:
+        }
+    }
+
+    ResultSet RequestQuery(const std::string& request) {
+        SqlQuery sql(request);
+
+        switch (sql.Type()) {
+            case SqlQuery::RequestType::Select:
+                return ResultSet(*tables_[sql.GetTableName()], sql);
             case SqlQuery::RequestType::Join:
                 //// TODO
                 break;
-
-            case SqlQuery::RequestType::None:
+//            default:
         }
+
+        return {};
     }
 
 private:

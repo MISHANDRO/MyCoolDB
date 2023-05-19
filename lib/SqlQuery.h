@@ -14,12 +14,6 @@
 //    });
 //}
 
-struct Condition {
-    std::string condition;
-    std::string lhs;
-    std::string operation;
-    std::string rhs;
-};
 
 class SqlQuery {
 public:
@@ -47,16 +41,12 @@ public:
         }
     }
 
-    void ConditionHandler(const std::string& condition_str);
-    void ColumnsValuesHandler(const std::string& str, bool columns_flag = true);
-
-    bool SelectHandler(const std::string& request);
-    bool DeleteHandler(const std::string& request);
-    bool InsertHandler(const std::string& request);
-    bool UpdateHandler(const std::string& request);
-    bool CreateHandler(const std::string& request);
-    bool DropHandler(const std::string& request);
-
+    struct Condition {
+        std::string condition;
+        std::string lhs;
+        std::string operation;
+        std::string rhs;
+    };
 
     enum RequestType {
         Select, Create, Drop, Insert, Update, Delete, Join, None
@@ -66,14 +56,37 @@ public:
         return type_;
     }
 
+    [[nodiscard]] std::unordered_map<std::string, std::string> GetData() const {
+        return columns_values;
+    }
+
+    [[nodiscard]] std::vector<Condition> GetConditions() const {
+        return conditions;
+    }
+
+    [[nodiscard]] std::string GetTableName() const {
+        return table;
+    }
+
     friend class Table;
 
 private:
+    void ConditionHandler(const std::string& condition_str);
+    static void ColumnsValuesHandler(const std::string& str, std::vector<std::string>& mas);
+
+    bool SelectHandler(const std::string& request);
+    bool DeleteHandler(const std::string& request);
+    bool InsertHandler(const std::string& request);
+    bool UpdateHandler(const std::string& request);
+    bool CreateHandler(const std::string& request);
+    bool DropHandler(const std::string& request);
+
+
     RequestType type_ = RequestType::None;
     std::string table;
 
-    std::vector<std::string> columns;
-    std::vector<std::string> values;
+    std::unordered_map<std::string, std::string> columns_values;
+//    std::vector<std::string> values;
 
-    std::vector<Condition> conditionals;
+    std::vector<Condition> conditions;
 };
