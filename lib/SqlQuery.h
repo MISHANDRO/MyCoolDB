@@ -17,56 +17,66 @@
 
 class SqlQuery {
 public:
-    explicit SqlQuery(const std::string& request) {
-        if (SelectHandler(request)) {
-            type_ = Select;
-        } else if (InsertHandler(request)) {
-            type_ = Insert;
-        } else if (DeleteHandler(request)) {
-            type_ = Delete;
-        } else if (UpdateHandler(request)) {
-            type_ = Update;
-        } else if (CreateHandler(request)) {
-            type_ = Create;
-        } else if (DropHandler(request)) {
-            type_ = Drop;
-        }
-//        else if (JoinHandler(request)) {
-//            type_ = Join;
-//        }
-
-        //// TODO exc
-        if (type_ == RequestType::None) {
-            throw QueryException("Bad query");
-        }
-    }
-
+    explicit SqlQuery(const std::string& request);
     struct Condition {
-        std::string condition;
-        std::string lhs;
-        std::string operation;
-        std::string rhs;
+
+        enum Type {
+            AND, OR, WHERE, ON
+        };
+
+        enum Operator {
+            Equals, NotEquals, More, MoreOrEquals, Lower, LowerOrEquals, IsNull, IsNotNull
+        };
+
+        template<typename T>
+        bool Compare(const T& lhs, const T& rhs) const {
+            switch (operation_) {
+                case Equals:
+                    return lhs == rhs;
+                case NotEquals:
+                    return lhs != rhs;
+                case More:
+                    return lhs > rhs;
+                case MoreOrEquals:
+                    return lhs >= rhs;
+                case Lower:
+                    return lhs < rhs;
+                case LowerOrEquals:
+                    return lhs <= rhs;
+                case IsNull:
+                    return false;
+                case IsNotNull:
+                    return true;
+            }
+
+            return false;
+        }
+
+        void SetCondition(const std::string& condition);
+        void SetLhs(const std::string& lhs);
+        void SetOperation(const std::string& operation);
+        void SetRhs (const std::string& rhs);
+
+        [[nodiscard]] Type GetCondition() const;
+        [[nodiscard]] std::string GetLhs() const;
+        [[nodiscard]] Operator GetOperation() const;
+        [[nodiscard]] std::string GetRhs() const;
+
+    private:
+        Type condition_;
+        std::string lhs_;
+        Operator operation_;
+        std::string rhs_;
     };
 
     enum RequestType {
         Select, Create, Drop, Insert, Update, Delete, Join, None
     };
 
-    [[nodiscard]] RequestType Type() const {
-        return type_;
-    }
-
-    [[nodiscard]] std::unordered_map<std::string, std::string> GetData() const {
-        return columns_values;
-    }
-
-    [[nodiscard]] std::vector<Condition> GetConditions() const {
-        return conditions;
-    }
-
-    [[nodiscard]] std::string GetTableName() const {
-        return table;
-    }
+    [[nodiscard]] RequestType Type() const;
+    [[nodiscard]] std::unordered_map<std::string, std::string> GetData() const;
+    [[nodiscard]] std::vector<Condition> GetConditions() const;
+    [[nodiscard]] std::string GetTableName() const;
 
     friend class Table;
 
@@ -80,13 +90,12 @@ private:
     bool UpdateHandler(const std::string& request);
     bool CreateHandler(const std::string& request);
     bool DropHandler(const std::string& request);
+    bool JoinHandler(const std::string& request);
 
 
     RequestType type_ = RequestType::None;
     std::string table;
 
     std::unordered_map<std::string, std::string> columns_values;
-//    std::vector<std::string> values;
-
     std::vector<Condition> conditions;
 };

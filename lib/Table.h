@@ -20,7 +20,7 @@ std::vector<std::string> split(const std::string& str, char delimiter = ' ') {
 
 class Table {
 public:
-    using table_list = std::unordered_map<std::string, std::unique_ptr<Table>>;
+    using table_list = std::map<std::string, std::unique_ptr<Table>>;
 
     explicit Table(const SqlQuery& sql,
                    const table_list& other_tables) {
@@ -49,10 +49,6 @@ public:
             if (std::find(parameters.begin(), parameters.end(), "PRIMARY") != parameters.end()) {
                 columns_[column]->SetPrimaryKeyFlag(true);
             }
-
-            if (std::find(parameters.begin(), parameters.end(), "NOT") != parameters.end()) {
-                columns_[column]->SetNotNullFlag(true);
-            }
         }
 
         for (auto& [column, type] : sql.GetData()) {
@@ -67,10 +63,8 @@ public:
         return columns_.begin()->second->Size();
     }
 
-    friend class MyCoolDB;
-    friend class ResultSet;
 
-    void AddRow(const SqlQuery& sql) {
+    void InsertRow(const SqlQuery& sql) {
         if (sql.type_ != SqlQuery::RequestType::Insert) {
             return;
         }
@@ -84,6 +78,7 @@ public:
             }
 
             //// TODO нужен ли try, чтоб удалить уже добавленное при ошибке?
+            //// TODO Или сделать сначала проверку на primary и foreign
         }
     }
 
@@ -94,9 +89,14 @@ public:
 
         auto conditions = sql.GetConditions();
         for (size_t i = 0; i < Count(); ++i) {
-            if (CheckCondition(conditions, i)) {
+            if (CheckConditions(conditions, i)) {
 
                 for (auto& [column, value]: sql.columns_values) {
+                    if (!columns_.contains(column)) {
+                        //// TODO
+                        throw QueryException("cdddc");
+                    }
+
                     columns_[column]->SetData(value, i);
                 }
 
@@ -111,7 +111,7 @@ public:
 
         auto conditions = sql.GetConditions();
         for (long long i = Count() - 1; i >= 0; --i) {
-            if (CheckCondition(conditions, i)) {
+            if (CheckConditions(conditions, i)) {
 
                 for (auto& [name, column]: columns_) {
                     column->DeleteData(i);
@@ -139,9 +139,10 @@ protected:
 
         auto conditions = sql.GetConditions();
         for (size_t i = 0; i < table.Count(); ++i) {
-            if (table.CheckCondition(conditions, i)) {
+            if (table.CheckConditions(conditions, i)) {
 
                 for (auto& [name, column]: columns_) {
+
                     column->CopyDataAt(table.columns_[name].get(), i);
                 }
 
@@ -153,16 +154,53 @@ protected:
 
 private:
 
-    bool CheckCondition(const std::vector<SqlQuery::Condition>& conditions,
-                               size_t index) {
-        //// TODO сделать проверку условий
+    bool CheckConditions(const std::vector<SqlQuery::Condition>& conditions,
+                         size_t index) {
+        if (conditions.empty()) {
+            return true;
+        }
+
+        bool res = CheckOneCondition(conditions[0], index);
+        for (size_t i = 1; i < conditions.size(); ++i) {
+            bool cur = CheckOneCondition(conditions[i], index);
+            switch (conditions[i].GetCondition()) {
+                case SqlQuery::Condition::AND:
+                    res = res && cur;
+                    break;
+                case SqlQuery::Condition::OR:
+                    res = res || cur;
+                    break;
+                case SqlQuery::Condition::WHERE:
+                case SqlQuery::Condition::ON:
+                    //// TODO сообщение
+                    throw QueryException("fwefwfe");
+            }
+        }
+
+        return res;
+    }
+
+    bool CheckOneCondition(const SqlQuery::Condition& condition, size_t index) {
+        if (columns_.contains(condition.GetLhs()) && columns_.contains(condition.GetRhs())) {
+            return columns_[condition.GetRhs()]->Compare(*columns_[condition.GetLhs()], condition, index);
+        }
+
+        if (columns_.contains(condition.GetLhs())) {
+            return columns_[condition.GetLhs()]->Compare(condition.GetRhs(), condition, index);
+        }
+
+        if (columns_.contains(condition.GetRhs())) {
+            return columns_[condition.GetRhs()]->Compare(condition.GetLhs(), condition, index);
+        }
+
         return true;
     }
 
     void CreateForeignKey(const std::string& column, const std::string& foreign,
                           const table_list& other_tables) {
         auto parameters = split(foreign);
-        columns_[column].get()->SetForeignKey(other_tables.at(parameters[0])->columns_.at(parameters[1]).get());
+        columns_[column].get()->SetForeignKey(parameters[0],
+                                              other_tables.at(parameters[0])->columns_.at(parameters[1]).get());
     }
 
     template<typename T>
@@ -189,4 +227,7 @@ private:
                 break;
         }
     }
+
+    friend class MyCoolDB;
+    friend class ResultSet;
 };
