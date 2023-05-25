@@ -1,72 +1,66 @@
-#include <iostream>
-#include <regex>
-#include <string>
-#include <vector>
-
-//#include <Column.h>
-//#include <SqlQuery.h>
-//#include <Table.h>
-//#include "ResultSet.h"
 #include "MyCoolDB.h"
 
+#include <iostream>
+#include <string>
 
 int main() {
 
     MyCoolDB db;
 
-    db.Request("CREATE TABLE Customers (id INT PRIMARY KEY,bre INT,\n"
-               "    name VARCHAR,\n"
+    db.Request("CREATE TABLE Customers ("
+               "    id   INT"
+               "    bre  INT,"
+               "    name VARCHAR,"
                ");");
 
 
-    db.Request("CREATE TABLE Orders (\n"
-               "    id INT PRIMARY KEY,\n"
-               "    customer_id INT,\n"
-               "    product VARCHAR,\n"
-               "    FOREIGN KEY (customer_id) REFERENCES Customers(id)\n"
+    db.Request("CREATE TABLE Orders ("
+               "    id          INT"
+               "    customer_id INT,"
+               "    product     VARCHAR,"
+//               "    FOREIGN KEY (customer_id) REFERENCES Customers(id)"
                ");");
 
 
-    db.Request("INSERT INTO Customers(id, name,) VALUES (2, HUI);          ");
-    db.Request("INSERT INTO Customers(id, name, bre, ) VALUES (3, JOHN, 34, );");
-    db.Request("INSERT INTO Customers(id, name, bre) VALUES (4, MISHA, 7); ");
-    db.Request("INSERT INTO Customers(id, name, bre) VALUES (5, MISHA, 12);");
+    db.Request("INSERT INTO Customers(id, name) VALUES (2, 'MICKLE');");
+    db.Request("INSERT INTO Customers(id, name) VALUES (2, 'SKOtt Mi');");
+    db.Request("INSERT INTO Customers(id, name, bre) VALUES (3, 'JOHN dewwed', 34);");
+    db.Request("INSERT INTO Customers(id, name, bre) VALUES (4, 'MISHA', 7);");
+    db.Request("INSERT INTO Customers(id, name, bre) VALUES (5, 'misha dewe', 12);");
 
-    db.Request("INSERT INTO Orders(id, customer_id, product) VALUES (1, 2, SDFDFSD)");
-    db.Request("INSERT INTO Orders(id, customer_id, product) VALUES (2, 2, TMN)");
-    db.Request("INSERT INTO Orders(id, customer_id, product) VALUES (3, 3, FEWEFEW)");
+    db.Request("INSERT INTO Orders(id, customer_id, product) VALUES (1, 2, 'coffee')");
+    db.Request("INSERT INTO Orders(id, customer_id, product) VALUES (2, 2, 'milk')");
+    db.Request("INSERT INTO Orders(id, customer_id, product) VALUES (3, 3, 'eggs')");
 
-    db.Request("UPDATE Customers SET name=hui WHERE id = 5");
+    db.Request("UPDATE Customers SET name=NULL WHERE id=5");
 
-//    auto res = db.RequestQuery("SELECT id, name FROM Customers WHERE bre IS NOT NULL AND id>3;");
-    auto res = db.RequestQuery("SELECT * FROM Customers INNER JOIN Orders ON Customers.id = Orders.customer_id"
-                               " WHERE bre IS NOT NULL AND id>3;");
+//    auto res = db.RequestQuery("SELECT * FROM Customers WHERE bre IS NOT NULL AND id > 3 AND bre > 8;");
+    auto res = db.RequestQuery("SELECT * FROM Customers RIGHT JOIN Orders ON Orders.customer_id = Customers.id WHERE Customers.name='SKOtt Mi' OR Orders.product='milk'");
 
     db.Save("dads.mcdb");
+    std::cout << res;
 //    while (res.Next()) {
-//        std::cout << res.Get<int>("id") << " " << res.Get<std::string>("name") << std::endl;
+//        std::cout << std::endl;
+//
+//        std::string ew = res.Get<std::string>("name").Value();
+//        std::cout << ew;
+//    }
+//
+//
+//    MyCoolDB db1;
+//    db1.Load("dads.mcdb");
+//
+//    res = db1.RequestQuery("SELECT * FROM Customers WHERE bre IS NOT NULL AND id > 3 AND bre > 8;");
+//
+//    while (res.Next()) {
+//        std::cout << res.Get<int>("id") << " "
+//                  << res.Get<std::string>("name") << " "
+//                  << res.Get<int>("bre") <<  std::endl;
 //    }
 
-
-//    db.Request("INSERT INTO Orders(id, customer_id) VALUES (1, 3)");
-//    db.Request("INSERT INTO Orders(id, customer_id) VALUES (2, 4)");
-//    db.Request("INSERT INTO Orders(id, customer_id) VALUES (3, 3)");
-//
-//    db.Request("UPDATE Orders SET customer_id=4");
-//
-//    db.Request("DELETE FROM Orders");
-//    ResultSet t1 = db.RequestQuery("SELECT * FROM Orders");
-//
-//    while (t1.Next()) {
-//        auto e1 = t1.Get<int>("customer_id");
-//        std::cout << (t1.Get<int>("id")) << " " << e1 << std::endl;
-//    }
-
-
-//    SqlQuery sql("SELECT table1.column1, table1.column2\n"
-//                 "FROM table1 \n"
-//                 "INNER JOIN table2  ON table1.id = table1.table1_id AND table1.category = 'Category1'\n"
-//                 "WHERE t2.status = 'Active';");
+//    SqlQuery sql("INSERT INTO Orders(id, customer_id, product) VALUES (1, 2, 'coffee hui pomelo'   )");
+//    SqlQuery sql("SELECT * FROM Customers WHERE bre IS NOT NULL AND id > 3 AND chlen = 'dede uhuh';");
+//    SqlQuery sql("UPDATE Customers SET name='base cdjncsd' WHERE id=5");
 
     return 0;
 }

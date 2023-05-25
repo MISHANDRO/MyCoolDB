@@ -29,9 +29,10 @@ public:
     virtual void SetData(const std::string& data, size_t index) {}
 
     virtual void DeleteData(size_t index) {}
-    virtual void CopyDataAt(BaseColumn* data, size_t index) {}
+    virtual void CopyDataFrom(BaseColumn* data, size_t index) {}
 
-    virtual bool Compare(const BaseColumn& other, const SqlQuery::Condition& operation, size_t index) { return false; }
+    virtual bool Compare(const BaseColumn& other, const SqlQuery::Condition& operation,
+                         size_t index_1, size_t index_2 = SIZE_MAX) { return false; }
     virtual bool Compare(const std::string& other, const SqlQuery::Condition& operation, size_t index) { return false; }
 
 
@@ -45,4 +46,6 @@ protected:
     DataType type_;
 
     bool primary_key = false;
+
+    friend class ResultSet;
 };

@@ -1,19 +1,12 @@
 #pragma once
 
-#include "ExceptionDB.h"
+#include "SqlException.h"
 
 #include <string>
 #include <vector>
 #include <unordered_map>
 #include <sstream>
 #include <regex>
-
-//bool CompareWithoutRegister(const std::string& str1, const std::string& str2) {
-//    return std::equal(str1.begin(), str1.end(), str2.begin(), [](char c1, char c2) {
-//        return std::toupper(static_cast<unsigned char>(c1)) == std::toupper(static_cast<unsigned char>(c2));
-//    });
-//}
-
 
 class SqlQuery {
 public:
@@ -63,9 +56,9 @@ public:
         [[nodiscard]] std::string GetRhs() const;
 
     private:
-        Type condition_;
+        Type condition_ = ON;
         std::string lhs_;
-        Operator operation_;
+        Operator operation_ = Equals;
         std::string rhs_;
     };
 

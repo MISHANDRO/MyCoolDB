@@ -11,28 +11,9 @@ public:
         : Table(table, sql)
     {}
 
-    ResultSet(ResultSet& table1, ResultSet& table2, const SqlQuery& sql) {
-        auto rows = sql.GetData();
-        for (auto& [name, column] : table1.columns_) {
-            std::string table_column = sql.GetTableName() + '.' + name;
-            if (rows.contains(table_column) || rows.contains("*")) {
-                columns_[table_column] = std::move(column);
-            }
-        }
-
-        for (auto& [name, column] : table2.columns_) {
-            std::string table_column = rows["JOIN TABLE"] + '.' + name;
-            if (rows.contains(table_column) || rows.contains("*")) {
-                columns_[table_column] = std::move(column);
-            }
-        }
-
-        //// TODO доделать
-    }
-
-    bool Next() {
-        return ++cur_ < Count();
-    }
+    static ResultSet JoinTables(Table& table1, Table& table2, SqlQuery& sql);
+    bool Next();
+    void Reset();
 
     template<typename T>
     Element<T> Get(const std::string& columnName) {
@@ -52,6 +33,8 @@ public:
 
         return Element<T>();
     }
+
+    friend std::ostream& operator<<(std::ostream& os, const ResultSet& result_set);
 
 private:
     size_t cur_ = SIZE_MAX;

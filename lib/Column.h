@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ExceptionDB.h"
+#include "SqlException.h"
 #include "BaseColumn.h"
 #include "Element.h"
 
@@ -23,13 +23,12 @@ public:
         return ss.str();
     }
 
-    T GetValType(const std::string& data) {
-        return T(data);
-    }
+    T GetValType(const std::string& data) const;
 
     void AddData(const std::string& data) override {
         if (data == "NULL") {
             values.emplace_back();
+            return;
         }
 
         T value = GetValType(data);
@@ -42,6 +41,12 @@ public:
     }
 
     void SetData(const std::string& data, size_t index) override {
+        if (data == "NULL") {
+            values[index] = Element<T>();
+            return;
+        }
+
+
         T value = GetValType(data);
         CheckAvailable(value);
         values[index] = Element<T>(value);
@@ -53,7 +58,7 @@ public:
     }
 
 
-    void CopyDataAt(BaseColumn* data, size_t index) override {
+    void CopyDataFrom(BaseColumn* data, size_t index) override {
         values.push_back(static_cast<Column<T>*>(data)->values[index]);
     }
 
@@ -68,22 +73,21 @@ public:
 
 
     void CheckAvailable(const T& val) {
-        bool check_foreign = CheckForeignKey(val);
+        bool check_foreign = CheckForeignKey(Element<T>(val));
         if (!check_foreign || !CheckPrimaryKey(val)) {
-            //// TODO
-            throw QueryException((!check_foreign) ? "Unavailable for FOREIGN KEY" :
-                                 "Unavailable for PRIMARY KEY");
+            throw SqlException((!check_foreign) ? "Unavailable for FOREIGN KEY" :
+                               "Unavailable for PRIMARY KEY");
         }
     }
 
-    [[nodiscard]] bool CheckForeignKey(const T& val) const {
+    [[nodiscard]] bool CheckForeignKey(const Element<T>& val) const {
         if (foreign_key.second == nullptr) {
             return true;
         }
 
         auto same_element = std::find_if(foreign_key.second->values.begin(), foreign_key.second->values.end(),
                      [val](const Element<T>& el) {
-                         return val == el.Value();
+                         return val == el;
                      }
         );
 
@@ -95,7 +99,7 @@ public:
         if (!primary_key) {
             return true;
         }
-        //// TODO СТРОГГИЙ ЧЕЕЕЕЕЕК
+
         auto same_element = std::find_if(values.begin(), values.end(),
                      [val](const Element<T>& el) {
                          return val == el.Value();
@@ -119,8 +123,12 @@ public:
 
 
     bool Compare(const BaseColumn& other, const SqlQuery::Condition& operation,
-                 size_t index) override {
-        return operation.Compare<T>(values[index].Value(), static_cast<const Column<T>*>(&other)->values[index].Value());
+                 size_t index1, size_t index2) override {
+        if (index2 == SIZE_MAX) {
+            index2 = index1;
+        }
+
+        return operation.Compare<T>(values[index1].Value(), static_cast<const Column<T>*>(&other)->values[index2].Value());
     }
 
     bool Compare(const std::string& other, const SqlQuery::Condition& operation,
@@ -143,32 +151,3 @@ private:
     std::pair<std::string, Column<T>*> foreign_key = {"", nullptr};
     Element<T> default_;
 };
-
-
-template<>
-int Column<int>::GetValType(const std::string& data) {
-    return std::strtol(data.c_str(), nullptr, 10);
-}
-
-template<>
-bool Column<bool>::GetValType(const std::string& data) {
-    if (data == "1" || data == "true") {
-        return true;
-    }
-    if (data == "0" || data == "false") {
-        return false;
-    }
-
-    //// TODO сообщения
-    throw QueryException("");
-}
-
-template<>
-double Column<double>::GetValType(const std::string& data) {
-    return std::strtod(data.c_str(), nullptr);
-}
-
-template<>
-float Column<float>::GetValType(const std::string& data) {
-    return std::strtof(data.c_str(), nullptr);
-}

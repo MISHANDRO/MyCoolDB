@@ -4,16 +4,16 @@
 #include <string>
 #include <utility>
 
-class QueryException : public std::exception {
-private:
-    std::string errorMessage;
-
+class SqlException : public std::exception {
 public:
-    explicit QueryException(std::string message)
+    explicit SqlException(std::string message)
         : errorMessage(std::move(message))
     {}
 
     [[nodiscard]] const char* what() const noexcept override {
         return errorMessage.c_str();
     }
+
+private:
+    std::string errorMessage;
 };

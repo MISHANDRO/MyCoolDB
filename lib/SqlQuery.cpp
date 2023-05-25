@@ -14,14 +14,12 @@ SqlQuery::SqlQuery(const std::string& request) {
         type_ = Create;
     } else if (DropHandler(request)) {
         type_ = Drop;
-    }
-    else if (JoinHandler(request)) {
+    } else if (JoinHandler(request)) {
         type_ = Join;
     }
 
-    //// TODO exc
     if (type_ == RequestType::None) {
-        throw QueryException("Bad query");
+        throw SqlException("Bad query");
     }
 }
 
@@ -47,7 +45,7 @@ void SqlQuery::ConditionHandler(const std::string& condition_str)  {
         return;
     }
 
-    std::regex conditionRegex(R"((WHERE|AND|OR|ON)\s+([^\s]+)\s*([(?:IS)<>!=]+)\s*((?:NOT NULL|NULL)|[^\s;]+))");
+    std::regex conditionRegex(R"((WHERE|AND|OR|ON)\s+([^\s=]+)\s*([(?:IS)<>!=]+)\s*((?:NOT NULL|NULL)|(?:'[^']*')|(?:[^,\s]+)+))");
     std::smatch matches;
 
     std::string::const_iterator start_search(condition_str.cbegin());
@@ -61,21 +59,19 @@ void SqlQuery::ConditionHandler(const std::string& condition_str)  {
 
             conditions.push_back(condition);
         } else {
-            //// TODO
-            throw QueryException("Bad condition_");
+            throw SqlException("Bad condition");
         }
 
         start_search = matches.suffix().first;
     }
 
     if (conditions.empty()) {
-        //// TODO
-        throw QueryException("Bad condition_");
+        throw SqlException("Empty condition");
     }
 }
 
 void SqlQuery::ColumnsValuesHandler(const std::string& str, std::vector<std::string>& mas) {
-    std::regex pattern(R"([^,\s*]+)");
+    std::regex pattern(R"(('[^']*')|([^,\s]+))");
     std::sregex_iterator pattern_iter(str.begin(), str.end(), pattern);
     std::sregex_iterator pattern_end;
 
@@ -131,7 +127,7 @@ bool SqlQuery::DeleteHandler(const std::string& request)  {
 }
 
 bool SqlQuery::InsertHandler(const std::string &request) {
-    std::regex regex(R"(INSERT\s+INTO\s+([^\s]+)\s*\(([A-Za-z0-9-_,\s]+)\)\s*VALUES\s*\(([A-Za-z0-9-_,\s]+)\)[\s;]*)");
+    std::regex regex(R"(INSERT\s+INTO\s+([^\s]+)\s*\(([A-Za-z0-9-_,\s]+)\)\s*VALUES\s*\((['"A-Za-z0-9-_,\s]+)\)[\s;]*)");
     std::smatch matches;
 
     if (std::regex_match(request, matches, regex) && matches.size() >= 4) {
@@ -144,8 +140,7 @@ bool SqlQuery::InsertHandler(const std::string &request) {
         ColumnsValuesHandler(matches[3].str(), values);
 
         if (columns.size() != values.size()) {
-            //// TODO
-            throw QueryException("Bad condition_");
+            throw SqlException("Bad insert construction");
         }
 
         for (size_t i = 0; i < columns.size(); ++i) {
@@ -159,7 +154,6 @@ bool SqlQuery::InsertHandler(const std::string &request) {
 }
 
 bool SqlQuery::UpdateHandler(const std::string &request)  {
-    //// TODO переделать отвратительную регулярку. Плохо видит условия. Сейчас костыль: в значениях нельзя писать капс
     std::regex regex(R"(UPDATE\s+([^\s]+)\s+SET\s+([^(?:WHERE)]+)\s*(?:(WHERE\s+[^;]+))?[\s;]*)");
     std::smatch matches;
 
@@ -167,7 +161,7 @@ bool SqlQuery::UpdateHandler(const std::string &request)  {
         table = matches[1].str();
 
         std::string columns_str = matches[2].str();
-        std::regex columnsRegex(R"([^\s=,]+)");
+        std::regex columnsRegex(R"(('[^']*')|[^\s=,]+)");
         std::sregex_iterator columnsIter(columns_str.begin(), columns_str.end(), columnsRegex);
         std::sregex_iterator columnsEnd;
 
@@ -292,8 +286,7 @@ void SqlQuery::Condition::SetCondition(const std::string& condition) {
     }  else if (condition == "ON") {
         condition_ = ON;
     } else {
-        //// TODO cooбщение
-        throw QueryException("vrrv");
+        throw SqlException("Bad condition operand");
     }
 }
 
@@ -320,8 +313,7 @@ void SqlQuery::Condition::SetOperation(const std::string& operation) {
 void SqlQuery::Condition::SetRhs(const std::string& rhs) {
     if (rhs == "NULL" || rhs == "NOT NULL") {
         if (operation_ != Equals && operation_ != IsNull && operation_ != IsNotNull) {
-            //// TODO сообщение
-            throw QueryException("vrrv");
+            throw SqlException("Bad condition");
         }
 
         operation_ = (rhs == "NULL") ? IsNull : IsNotNull;

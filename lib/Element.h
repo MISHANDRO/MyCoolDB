@@ -6,8 +6,8 @@ template<typename T>
 class Element {
 public:
     Element()
-            : value_(T())
-            , null(true)
+        : value_(T())
+        , null_(true)
     {}
 
     explicit Element(T value)
@@ -19,20 +19,26 @@ public:
     }
 
     [[nodiscard]] bool IsNull() const {
-        return null;
+        return null_;
     }
 
-    friend std::ostream& operator<<(std::ostream& os, const Element& element) {
+    friend std::ostream& operator<<(std::ostream& os, const Element<T>& element) {
         if (element.IsNull()) {
             os << "NULL";
+        } else if (std::is_same<T, std::string>::value) {
+            os << '\'' << element.value_ << '\'';
         } else {
-            os << element.Value();
+            os << element.value_;
         }
 
         return os;
     }
 
+    bool operator==(const Element& other) const {
+        return null_ == other.null_ && value_ == other.value_;
+    }
+
 private:
     T value_;
-    bool null = false;
+    bool null_ = false;
 };
