@@ -1,5 +1,15 @@
 #include "MyCoolDB.h"
 
+std::vector<std::string> MyCoolDB::GetTableNames() const {
+    std::vector<std::string> table_names;
+    table_names.reserve(tables_.size());
+    for (auto& [table_name, _] : tables_) {
+        table_names.push_back(table_name);
+    }
+
+    return table_names;
+}
+
 void MyCoolDB::Load(const std::filesystem::path& path) {
     std::ifstream file(path);
 
@@ -8,6 +18,9 @@ void MyCoolDB::Load(const std::filesystem::path& path) {
     while (file.get(ch)) {
         if (ch == ';') {
             Request(query);
+            query = "";
+            continue;
+        } else if (ch == '\n') {
             continue;
         }
 
@@ -64,6 +77,14 @@ void MyCoolDB::Save(const std::filesystem::path& path) {
 
 void MyCoolDB::Request(const std::string& request) {
     SqlQuery sql(request);
+
+    if (sql.Type() == SqlQuery::RequestType::Create && tables_.contains(sql.GetTableName())) {
+        throw SqlException("Table already exists");
+    }
+
+    if (sql.Type() != SqlQuery::RequestType::Create && !tables_.contains(sql.GetTableName())) {
+        throw SqlException("No such table");
+    }
 
     switch (sql.Type()) {
         case SqlQuery::RequestType::Create: {

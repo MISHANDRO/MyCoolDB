@@ -127,7 +127,7 @@ bool SqlQuery::DeleteHandler(const std::string& request)  {
 }
 
 bool SqlQuery::InsertHandler(const std::string &request) {
-    std::regex regex(R"(INSERT\s+INTO\s+([^\s]+)\s*\(([A-Za-z0-9-_,\s]+)\)\s*VALUES\s*\((['"A-Za-z0-9-_,\s]+)\)[\s;]*)");
+    std::regex regex(R"(INSERT\s+INTO\s+([^\s]+)\s*\(([A-Za-z0-9-_,\s]+)\)\s*VALUES\s*\((['"A-Za-z0-9-_,\s\.]+)\)[\s;]*)");
     std::smatch matches;
 
     if (std::regex_match(request, matches, regex) && matches.size() >= 4) {

@@ -9,16 +9,16 @@ void ResultSet::Reset() {
     cur_ = 0;
 }
 
-std::ostream& operator<<(std::ostream& os, const ResultSet& result_set) {
+std::ostream& operator<<(std::ostream& os, ResultSet& result_set) {
 
-    for (auto& [name, _] : result_set.columns_) {
-        os << name << ' ';
-    }
+    auto column_names = result_set.GetColumnNames();
+
+    std::ranges::reverse_copy(column_names, std::ostream_iterator<std::string>(os, " | "));
     os << '\n';
 
     for (size_t i = 0; i < result_set.Count(); ++i) {
-        for (auto& [_, column] : result_set.columns_) {
-            os << column->GetStrData(i) << ' ';
+        for (auto j = column_names.cend() - 1; j >= column_names.cbegin(); --j) {
+            os << result_set.columns_[*j]->GetStrData(i) << " | ";
         }
         os << '\n';
     }
@@ -28,22 +28,22 @@ std::ostream& operator<<(std::ostream& os, const ResultSet& result_set) {
 
 ResultSet ResultSet::JoinTables(Table& table1, Table& table2, SqlQuery& sql) {
     auto rows = sql.GetData();
-    std::string table1_name = sql.GetTableName() + '.';
-    std::string table2_name = rows["JOIN TABLE"] + '.';
+    std::string left_table_name = sql.GetTableName() + '.';
+    std::string right_table_name = rows["JOIN TABLE"] + '.';
 
     Table joined_table;
 
     for (auto& [name, column] : table1.columns_) {
-        std::string table_column = table1_name + name;
-        if (rows.contains(table_column) || rows.contains("*")) {
-            joined_table.AddColumnByType(table_column, column->Type());
+        std::string table_column_name = left_table_name + name;
+        if (rows.contains(table_column_name) || rows.contains("*")) {
+            joined_table.AddColumnByType(table_column_name, column->Type());
         }
     }
 
     for (auto& [name, column] : table2.columns_) {
-        std::string table_column = table2_name + name;
-        if (rows.contains(table_column) || rows.contains("*")) {
-            joined_table.AddColumnByType(table_column, column->Type());
+        std::string table_column_name = right_table_name + name;
+        if (rows.contains(table_column_name) || rows.contains("*")) {
+            joined_table.AddColumnByType(table_column_name, column->Type());
         }
     }
 
@@ -51,7 +51,7 @@ ResultSet ResultSet::JoinTables(Table& table1, Table& table2, SqlQuery& sql) {
     Table* right_table = &table2;
     if (rows["JOIN TYPE"] == "RIGHT") {
         std::swap(left_table, right_table);
-        std::swap(table1_name, table2_name);
+        std::swap(left_table_name, right_table_name);
     }
 
     const bool kInnerMode = rows["JOIN TYPE"] == "INNER";
@@ -97,14 +97,14 @@ ResultSet ResultSet::JoinTables(Table& table1, Table& table2, SqlQuery& sql) {
                     joined_flag = true;
 
                     for (auto& [name, column]: left_table->columns_) {
-                        if (joined_table.columns_.contains(table1_name + name)) {
-                            joined_table.columns_[table1_name + name]->CopyDataFrom(column.get(), i);
+                        if (joined_table.columns_.contains(left_table_name + name)) {
+                            joined_table.columns_[left_table_name + name]->CopyDataFrom(column.get(), i);
                         }
                     }
 
                     for (auto& [name, column]: right_table->columns_) {
-                        if (joined_table.columns_.contains(table2_name + name)) {
-                            joined_table.columns_[table2_name + name]->CopyDataFrom(column.get(), j);
+                        if (joined_table.columns_.contains(right_table_name + name)) {
+                            joined_table.columns_[right_table_name + name]->CopyDataFrom(column.get(), j);
                         }
                     }
                 }
@@ -113,13 +113,13 @@ ResultSet ResultSet::JoinTables(Table& table1, Table& table2, SqlQuery& sql) {
 
         if (!joined_flag && !kInnerMode) {
             for (auto& [name, column]: left_table->columns_) {
-                if (joined_table.columns_.contains(table1_name + name)) {
-                    joined_table.columns_[table1_name + name]->CopyDataFrom(column.get(), i);
+                if (joined_table.columns_.contains(left_table_name + name)) {
+                    joined_table.columns_[left_table_name + name]->CopyDataFrom(column.get(), i);
                 }
             }
 
             for (auto& [name, _]: right_table->columns_) {
-                joined_table.columns_[table2_name + name]->AddData("NULL");
+                joined_table.columns_[right_table_name + name]->AddData("NULL");
             }
         }
     }

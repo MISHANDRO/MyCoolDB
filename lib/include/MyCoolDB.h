@@ -16,6 +16,8 @@ public:
     void Request(const std::string& request);
     ResultSet RequestQuery(const std::string& request);
 
+    [[nodiscard]] std::vector<std::string> GetTableNames() const;
+
 private:
 
     ResultSet JoinTables(SqlQuery& sql);

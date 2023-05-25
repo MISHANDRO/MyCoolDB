@@ -142,6 +142,10 @@ public:
             return !element.IsNull();
         }
 
+        if (element.IsNull()) {
+            return false;
+        }
+
         return operation.Compare<T>(element.Value(), GetValType(other));
     }
 

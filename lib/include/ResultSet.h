@@ -34,7 +34,7 @@ public:
         return Element<T>();
     }
 
-    friend std::ostream& operator<<(std::ostream& os, const ResultSet& result_set);
+    friend std::ostream& operator<<(std::ostream& os, ResultSet& result_set);
 
 private:
     size_t cur_ = SIZE_MAX;

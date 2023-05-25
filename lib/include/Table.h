@@ -18,6 +18,17 @@ public:
     void UpdateRow(const SqlQuery& sql);
     void DeleteRow(const SqlQuery& sql);
 
+    [[nodiscard]] std::vector<std::string> GetColumnNames() const {
+        std::vector<std::string> column_names;
+        column_names.reserve(columns_.size());
+
+        for (auto& [colum_name, _] : columns_) {
+            column_names.push_back(colum_name);
+        }
+
+        return column_names;
+    }
+
 protected:
 
     Table() = default;
@@ -25,6 +36,7 @@ protected:
 
     static std::vector<std::string> split(const std::string& str, char delimiter = ' ');
 
+    // order is important
     std::unordered_map<std::string, std::unique_ptr<BaseColumn>> columns_;
 
 private:
@@ -42,6 +54,6 @@ private:
 
     void AddColumnByType(const std::string& name, const BaseColumn::DataType& type);
 
-    friend class MyCoolDB;
     friend class ResultSet;
+    friend class MyCoolDB;
 };
