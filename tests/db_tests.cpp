@@ -106,6 +106,11 @@ TEST(DBTestSuite, SelectTest) {
     resSet4.Next();
     ASSERT_EQ(resSet4.Get<int>("id").Value(), 4);
     ASSERT_FALSE(resSet2.Next());
+
+    ResultSet resSet5 = db.RequestQuery("SELECT id FROM Customers WHERE male != true");
+    ASSERT_EQ(resSet5.Count(), 1);
+    ASSERT_EQ(resSet5.Get<int>("id").Value(), 4);
+    ASSERT_FALSE(resSet5.Next());
 }
 
 TEST(DBTestSuite, UpdateTest) {
@@ -153,11 +158,37 @@ TEST(DBTestSuite, DropTableTest) {
 }
 
 TEST(DBTestSuite, PrimaryKeyTest) {
+    MyCoolDB db;
 
+    db.Request("CREATE TABLE Products ("
+               "    id INT PRIMARY KEY,"
+               "    name VARCHAR"
+               ")");
+
+    db.Request("INSERT INTO Products(id, name) VALUES (1, 'Milk')");
+    ASSERT_THROW(db.Request("INSERT INTO Products(id, name) VALUES (1, 'Eggs')"), SqlException);
+    db.Request("INSERT INTO Products(id, name) VALUES (2, 'Eggs')");
+    ASSERT_THROW(db.Request("INSERT INTO Products(id, name) VALUES (2, 'Coffee')"), SqlException);
 }
 
 TEST(DBTestSuite, ForeignKeyTest) {
+    MyCoolDB db = GetTestDB();
 
+    db.Request("CREATE TABLE Orders ("
+               "    id INT PRIMARY KEY,"
+               "    customer_id INT,"
+               "    product VARCHAR,"
+               "    FOREIGN KEY (customer_id) REFERENCES Customers(id)"
+               ")");
+
+    db.Request("INSERT INTO Orders(id, customer_id, product) VALUES (1, 1, 'Milk')");
+    db.Request("INSERT INTO Orders(id, customer_id, product) VALUES (2, 1, 'Doshirak')");
+    db.Request("INSERT INTO Orders(id, customer_id, product) VALUES (3, 2, 'Coffee')");
+    db.Request("INSERT INTO Orders(id, customer_id, product) VALUES (4, 2, 'Beckon')");
+    db.Request("INSERT INTO Orders(id, customer_id, product) VALUES (5, 3, 'Adrenalin Rush')");
+    db.Request("INSERT INTO Orders(id, customer_id, product) VALUES (6, 4, 'Cocoa')");
+    ASSERT_THROW(db.Request("INSERT INTO Orders(id, customer_id, product) VALUES (7, 5, 'PC')"), SqlException);
+    ASSERT_THROW(db.Request("INSERT INTO Orders(id, customer_id, product) VALUES (8, 6, 'House')"), SqlException);
 }
 
 TEST(DBTestSuite, SaveLoadTest) {
@@ -198,9 +229,126 @@ TEST(DBTestSuite, SaveLoadTest) {
 }
 
 TEST(DBTestSuite, JoinTest) {
+    MyCoolDB db = GetTestDB();
 
+    db.Request("CREATE TABLE Orders ("
+               "    id INT PRIMARY KEY,"
+               "    customer_id INT,"
+               "    product VARCHAR,"
+               ")");
+
+    db.Request("INSERT INTO Orders(id, customer_id, product) VALUES (1, 1, 'Milk')");
+    db.Request("INSERT INTO Orders(id, customer_id, product) VALUES (2, 1, 'Doshirak')");
+    db.Request("INSERT INTO Orders(id, customer_id, product) VALUES (3, 2, 'Beet')");
+    db.Request("INSERT INTO Orders(id, customer_id, product) VALUES (4, 2, 'Beckon')");
+    db.Request("INSERT INTO Orders(id, customer_id, product) VALUES (5, 4, 'Cocoa')");
+    db.Request("INSERT INTO Orders(id, customer_id, product) VALUES (6, 5, 'PC')");
+    db.Request("INSERT INTO Orders(id, customer_id, product) VALUES (7, 6, 'House')");
+
+    ResultSet resSet1 = db.RequestQuery("SELECT * FROM Customers INNER JOIN Orders ON Orders.customer_id = Customers.id");
+    ASSERT_EQ(resSet1.Count(), 5);
+    resSet1.Next();
+    ASSERT_EQ(resSet1.Get<int>("Orders.id").Value(), 1);
+    ASSERT_EQ(resSet1.Get<int>("Customers.id").Value(), 1);
+    ASSERT_EQ(resSet1.Get<std::string>("Customers.name").Value(), "Michael Scott");
+    ASSERT_EQ(resSet1.Get<std::string>("Orders.product").Value(), "Milk");
+
+    resSet1.Next();
+    ASSERT_EQ(resSet1.Get<int>("Orders.id").Value(), 2);
+    ASSERT_EQ(resSet1.Get<int>("Customers.id").Value(), 1);
+    ASSERT_EQ(resSet1.Get<std::string>("Customers.name").Value(), "Michael Scott");
+    ASSERT_EQ(resSet1.Get<std::string>("Orders.product").Value(), "Doshirak");
+
+    resSet1.Next();
+    ASSERT_EQ(resSet1.Get<int>("Orders.id").Value(), 3);
+    ASSERT_EQ(resSet1.Get<int>("Customers.id").Value(), 2);
+    ASSERT_EQ(resSet1.Get<std::string>("Customers.name").Value(), "Dwight Schrute");
+    ASSERT_EQ(resSet1.Get<std::string>("Orders.product").Value(), "Beet");
+
+    resSet1.Next();
+    ASSERT_EQ(resSet1.Get<int>("Orders.id").Value(), 4);
+    ASSERT_EQ(resSet1.Get<int>("Customers.id").Value(), 2);
+    ASSERT_EQ(resSet1.Get<std::string>("Customers.name").Value(), "Dwight Schrute");
+    ASSERT_EQ(resSet1.Get<std::string>("Orders.product").Value(), "Beckon");
+
+    resSet1.Next();
+    ASSERT_EQ(resSet1.Get<int>("Orders.id").Value(), 5);
+    ASSERT_EQ(resSet1.Get<int>("Customers.id").Value(), 4);
+    ASSERT_EQ(resSet1.Get<std::string>("Customers.name").Value(), "Pam Beesly");
+    ASSERT_EQ(resSet1.Get<std::string>("Orders.product").Value(), "Cocoa");
+    ASSERT_FALSE(resSet1.Next());
+
+
+    ResultSet resSet2 = db.RequestQuery("SELECT * FROM Customers LEFT JOIN Orders ON Orders.customer_id = Customers.id");
+    ASSERT_EQ(resSet2.Count(), 6);
+    resSet2.Next();
+    resSet2.Next();
+    resSet2.Next();
+    resSet2.Next();
+    resSet2.Next();
+    ASSERT_TRUE(resSet2.Get<int>("Orders.id").IsNull());
+    ASSERT_TRUE(resSet2.Get<int>("Orders.customer_id").IsNull());
+    ASSERT_TRUE(resSet2.Get<std::string>("Orders.product").IsNull());
+    ASSERT_EQ(resSet2.Get<int>("Customers.id").Value(), 3);
+    ASSERT_EQ(resSet2.Get<std::string>("Customers.name").Value(), "Jim Halpert");
+
+    ResultSet resSet3 = db.RequestQuery("SELECT * FROM Customers RIGHT JOIN Orders ON Orders.customer_id = Customers.id");
+    ASSERT_EQ(resSet3.Count(), 7);
+    resSet3.Next();
+    resSet3.Next();
+    resSet3.Next();
+    resSet3.Next();
+    resSet3.Next();
+    resSet3.Next();
+    ASSERT_TRUE(resSet3.Get<int>("Customers.id").IsNull());
+    ASSERT_TRUE(resSet3.Get<std::string>("Customers.name").IsNull());
+    ASSERT_TRUE(resSet3.Get<double>("Customers.age").IsNull());
+    ASSERT_EQ(resSet3.Get<int>("Orders.id").Value(), 6);
+    ASSERT_EQ(resSet3.Get<std::string>("Orders.product").Value(), "PC");
+
+    resSet3.Next();
+    ASSERT_TRUE(resSet3.Get<int>("Customers.id").IsNull());
+    ASSERT_TRUE(resSet3.Get<std::string>("Customers.name").IsNull());
+    ASSERT_TRUE(resSet3.Get<double>("Customers.age").IsNull());
+    ASSERT_EQ(resSet3.Get<int>("Orders.id").Value(), 7);
+    ASSERT_EQ(resSet3.Get<std::string>("Orders.product").Value(), "House");
+
+
+    ResultSet resSet4 = db.RequestQuery("SELECT * FROM Customers INNER JOIN Orders ON Orders.customer_id = Customers.id "
+                                        "WHERE Customers.id >= 3 OR Orders.product = 'Doshirak'");
+    ASSERT_EQ(resSet4.Count(), 2);
+    resSet4.Next();
+    ASSERT_EQ(resSet4.Get<int>("Orders.id").Value(), 2);
+    ASSERT_EQ(resSet4.Get<int>("Customers.id").Value(), 1);
+    ASSERT_EQ(resSet4.Get<std::string>("Customers.name").Value(), "Michael Scott");
+    ASSERT_EQ(resSet4.Get<std::string>("Orders.product").Value(), "Doshirak");
+
+    resSet4.Next();
+    ASSERT_EQ(resSet4.Get<int>("Orders.id").Value(), 5);
+    ASSERT_EQ(resSet4.Get<int>("Customers.id").Value(), 4);
+    ASSERT_EQ(resSet4.Get<std::string>("Customers.name").Value(), "Pam Beesly");
+    ASSERT_EQ(resSet4.Get<std::string>("Orders.product").Value(), "Cocoa");
 }
 
 TEST(DBTestSuite, UglySqlQueryTest) {
+    MyCoolDB db;
 
+    db.Request("CREATE TABLE Products ("
+               "    id INT PRIMARY KEY,"
+               "    name VARCHAR"
+               ")");
+
+    db.Request("INSERT   INTO    Products(id, name) VALUES   (1, 'Milk') ; ;;");
+    db.Request("INSERT      INTO     Products(id  ,    name)      VALUES (2,    'Eggs', );;;;");
+
+    ResultSet resSet = db.RequestQuery("SELECT  *  FROM    Products ; ;");
+    ASSERT_EQ(resSet.Count(), 2);
+    resSet.Next();
+    ASSERT_EQ(resSet.Get<int>("id").Value(), 1);
+    ASSERT_EQ(resSet.Get<std::string>("name").Value(), "Milk");
+
+    resSet.Next();
+    ASSERT_EQ(resSet.Get<int>("id").Value(), 2);
+    ASSERT_EQ(resSet.Get<std::string>("name").Value(), "Eggs");
+    ASSERT_FALSE(resSet.Next());
 }
