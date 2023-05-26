@@ -1,3 +1,76 @@
+# My Cool DataBase
+
+## Дополнительный функционал
+
+При создании таблицы можно указать для полей дополнительные параметры (идентичны тем, что используются в обычном SQL):
+- *AUTO_INCREMENT* - автоматически инкриминирует значение;
+- *NOT NULL* - не позволяет полю иметь нулевое (пустое) значение
+- *DEFAULT(value)* - устанавливает значение по умолчанию для поля
+
+## Принцип работы
+
+### Метод Request(query)
+
+Метод *Request(query)* используется для запросов, не требующих ответа, такие как *CREATE TABLE, INSERT, UPDATE* и т.п.
+
+Примечание: правильность исполнения можно проверить, отловив исключения. Нет исключения - запрос успешно выполнен. Вылезло исключение - ошибка запроса.
+
+```cpp
+MyCoolDB db;
+...
+db.Request("INSERT INTO Customers(id, name) VALUES (1, 'Michael Scott')");
+db.Request("UPDATE Customers SET age = NULL WHERE id = 3");
+```
+
+### Метод RequestQuery(query)
+
+Метод *RequestQuery(query)* используется для запросов, требующих ответа, то есть для *Select*.
+В ответ возвращается структура *ResultSet*
+
+```cpp
+MyCoolDB db;
+ResultSet resSet = db.RequestQuery("SELECT * FROM Customers");
+```
+
+
+### Структура ResultSet
+
+Структура *ResultSet* имеет следующие методы:
+- *Count()* - количество полученных записей;
+- *Next()* - переключает итератор на следующую запись. Возвращает true, если переключение выполнено, иначе false;
+- *Reset()* - сбрасывает итератор;
+- *Get<type>(column_name)* - возвращает структуру-значение Element<type> из колонки column_name на текущем итераторе. Структура имеет 2 метода: 
+  1) *Value()* - возвращает значение; 
+  2) *IsNull()* - возвращает true, если нулевое (пустое) значение, иначе false.
+
+Примечание: первое использование *Next()* переводит итератор на первую запись, но при этом если сразу без него воспользоваться метода *Get*, то итератор предварительно сам переключится на первую запись. Это нужно для того, чтоб можно было удобно получить все записи через цикл while, но если нам нужно получить только из первой (возможно единственной) записи данные, то можно не использовать лишний *Next()*.
+```cpp
+MyCoolDB db;
+...
+ResultSet resSet = db.RequestQuery("SELECT name FROM Customers");
+// выводиться значение name для всех записей
+while (res.Next()) {
+    std::cout << res.Get<std::string>("name") << std::endl;
+}
+...
+ResultSet resSet = db.RequestQuery("SELECT product FROM Orders WHERE id = 5");
+// id - уникальное значение, поэтому сразу выводим значение product для единственной записи
+std::cout << res.Get<std::string>("product") << std::endl;
+```
+
+Примечание: при использовании *SELECT JOIN*, для получения значение надо указать не только имя колонки, но и имя таблицы. То есть: table.column
+```cpp
+MyCoolDB db;
+...
+ResultSet resSet = db.RequestQuery("SELECT * FROM Customers INNER JOIN Orders "
+                                   "ON Orders.customer_id = Customers.id");
+while (resSet.Next()) {
+    std::cout << resSet.Get<int>("Orders.id").Value() << ' '
+              << resSet.Get<int>("Customers.id").Value() << std::endl;
+}
+```
+
+
 # Лабораторная работа 12
 
 Реляционная база данных в памяти с поддержкой упрощенных sql запросов.
