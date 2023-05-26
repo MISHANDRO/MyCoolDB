@@ -17,6 +17,11 @@ public:
         default_ = Element<T>();
     }
 
+    void SetDefault(const std::string& data) {
+        T value = GetValType(data);
+        default_ = Element<T>(value);
+    }
+
     [[nodiscard]] std::string GetStrData(size_t index) const override {
         std::stringstream ss;
         ss << values[index];
@@ -27,6 +32,10 @@ public:
 
     void AddData(const std::string& data) override {
         if (data == "NULL") {
+            if (not_null_) {
+                throw SqlException("The value of  cannot be NULL");
+            }
+
             values.emplace_back();
             return;
         }
@@ -37,6 +46,15 @@ public:
     }
 
     void AddDefault() override {
+        if (auto_increment_) {
+            AddData(std::to_string(values.size() + 1));
+            return;
+        }
+
+        if (not_null_ && default_.IsNull()) {
+            throw SqlException("The value of " + column_name_ +"cannot be NULL");
+        }
+
         values.push_back(default_);
     }
 
@@ -96,7 +114,7 @@ public:
 
 
     [[nodiscard]] bool CheckPrimaryKey(const T& val) const {
-        if (!primary_key) {
+        if (!primary_key_) {
             return true;
         }
 
@@ -118,7 +136,7 @@ public:
             return "";
         }
 
-        return foreign_key.first + '(' + foreign_key.second->column_name + ')';
+        return foreign_key.first + '(' + foreign_key.second->column_name_ + ')';
     }
 
 

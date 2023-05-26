@@ -11,7 +11,7 @@ public:
     };
 
     explicit BaseColumn(std::string name, DataType type)
-            : column_name(std::move(name))
+            : column_name_(std::move(name))
             , type_(type)
     {}
 
@@ -39,13 +39,18 @@ public:
     virtual void SetForeignKey(const std::string& table, BaseColumn* val) {};
     [[nodiscard]] virtual std::string GetStrForeignKey() const { return ""; };
     void SetPrimaryKeyFlag(bool val);
+    void SetAutoIncrementFlag(bool val);
+    void SetNotNullFlag(bool val);
+    virtual void SetDefault(const std::string& data) {};
 
 
 protected:
-    std::string column_name;
+    std::string column_name_;
     DataType type_;
 
-    bool primary_key = false;
+    bool primary_key_ = false;
+    bool auto_increment_ = false;
+    bool not_null_ = false;
 
     friend class ResultSet;
 };

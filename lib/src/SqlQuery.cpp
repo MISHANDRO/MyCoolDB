@@ -187,14 +187,14 @@ bool SqlQuery::UpdateHandler(const std::string &request)  {
 }
 
 bool SqlQuery::CreateHandler(const std::string &request) {
-    std::regex regex(R"(CREATE\s+TABLE\s+([^\s]+)\s+\(([\sA-Za-z0-9-_,\(\)]*)\)[\s;]*)");
+    std::regex regex(R"(CREATE\s+TABLE\s+([^\s]+)\s+\(([\sA-Za-z0-9-_,\(\)']*)\)[\s;]*)");
     std::smatch matches;
 
     if (std::regex_match(request, matches, regex) && matches.size() >= 2) {
         table = matches[1].str();
 
         std::string table_struct = matches[2].str();
-        std::regex table_struct_regex(R"(([^\s,\(]+)\s+([^\s,]+(?:\s+(?:PRIMARY KEY))*))");
+        std::regex table_struct_regex(R"(([^\s,\(]+)\s+([^\s,]+(?:\s+(?:PRIMARY KEY|NOT NULL|AUTO_INCREMENT|DEFAULT\([^\)]+\)))*))");
 
         std::string::const_iterator start_search(table_struct.cbegin());
         while (std::regex_search(start_search, table_struct.cend(), matches, table_struct_regex)) {

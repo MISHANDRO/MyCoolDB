@@ -157,6 +157,88 @@ TEST(DBTestSuite, DropTableTest) {
     ASSERT_EQ(db.GetTableNames(), std::vector<std::string>());
 }
 
+TEST(DBTestSuite, AutoIncrementTest) {
+    MyCoolDB db;
+
+    db.Request("CREATE TABLE Products ("
+               "    id INT PRIMARY KEY AUTO_INCREMENT,"
+               "    name VARCHAR"
+               ")");
+
+    db.Request("INSERT INTO Products(name) VALUES ('Milk')");
+    db.Request("INSERT INTO Products(name) VALUES ('Eggs')");
+    db.Request("INSERT INTO Products(name) VALUES ('Coffee')");
+
+    ResultSet resSet = db.RequestQuery("SELECT * FROM Products");
+    ASSERT_EQ(resSet.Count(), 3);
+
+    resSet.Next();
+    ASSERT_EQ(resSet.Get<int>("id").Value(), 1);
+    ASSERT_EQ(resSet.Get<std::string>("name").Value(), "Milk");
+
+    resSet.Next();
+    ASSERT_EQ(resSet.Get<int>("id").Value(), 2);
+    ASSERT_EQ(resSet.Get<std::string>("name").Value(), "Eggs");
+
+    resSet.Next();
+    ASSERT_EQ(resSet.Get<int>("id").Value(), 3);
+    ASSERT_EQ(resSet.Get<std::string>("name").Value(), "Coffee");
+}
+
+TEST(DBTestSuite, NotNullTest) {
+    MyCoolDB db;
+
+    db.Request("CREATE TABLE Products ("
+               "    id INT PRIMARY KEY AUTO_INCREMENT,"
+               "    name VARCHAR NOT NULL"
+               ")");
+
+    db.Request("INSERT INTO Products(name) VALUES ('Milk')");
+    db.Request("INSERT INTO Products(name) VALUES ('Eggs')");
+    db.Request("INSERT INTO Products(id, name) VALUES (3, 'Coffee')");
+    ASSERT_THROW(db.Request("INSERT INTO Products(id) VALUES (4)"), SqlException);
+    ASSERT_THROW(db.Request("INSERT INTO Products(id, name) VALUES (4, NULL)"), SqlException);
+}
+
+TEST(DBTestSuite, DefaultTest) {
+    MyCoolDB db;
+
+    db.Request("CREATE TABLE Products ("
+               "    id INT PRIMARY KEY AUTO_INCREMENT,"
+               "    name VARCHAR DEFAULT('Nothing') NOT NULL,"
+               "    count INT DEFAULT(5)"
+               ")");
+
+    db.Request("INSERT INTO Products(name) VALUES ('Milk')");
+    db.Request("INSERT INTO Products(count) VALUES (10)");
+    db.Request("INSERT INTO Products(id) VALUES (3)");
+    db.Request("INSERT INTO Products(name, count) VALUES ('Eggs', NULL)");
+
+    ResultSet resSet = db.RequestQuery("SELECT * FROM Products");
+    std::cout <<resSet;
+    ASSERT_EQ(resSet.Count(), 4);
+
+    resSet.Next();
+    ASSERT_EQ(resSet.Get<int>("id").Value(), 1);
+    ASSERT_EQ(resSet.Get<std::string>("name").Value(), "Milk");
+    ASSERT_EQ(resSet.Get<int>("count").Value(), 5);
+
+    resSet.Next();
+    ASSERT_EQ(resSet.Get<int>("id").Value(), 2);
+    ASSERT_EQ(resSet.Get<std::string>("name").Value(), "Nothing");
+    ASSERT_EQ(resSet.Get<int>("count").Value(), 10);
+
+    resSet.Next();
+    ASSERT_EQ(resSet.Get<int>("id").Value(), 3);
+    ASSERT_EQ(resSet.Get<std::string>("name").Value(), "Nothing");
+    ASSERT_EQ(resSet.Get<int>("count").Value(), 5);
+
+    resSet.Next();
+    ASSERT_EQ(resSet.Get<int>("id").Value(), 4);
+    ASSERT_EQ(resSet.Get<std::string>("name").Value(), "Eggs");
+    ASSERT_TRUE(resSet.Get<int>("count").IsNull());
+}
+
 TEST(DBTestSuite, PrimaryKeyTest) {
     MyCoolDB db;
 

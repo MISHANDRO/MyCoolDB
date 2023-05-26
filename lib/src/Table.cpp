@@ -26,6 +26,24 @@ Table::Table(const SqlQuery& sql,
         if (std::find(parameters.begin(), parameters.end(), "PRIMARY") != parameters.end()) {
             columns_[column]->SetPrimaryKeyFlag(true);
         }
+
+        if (std::find(parameters.begin(), parameters.end(), "AUTO_INCREMENT") != parameters.end()) {
+            columns_[column]->SetAutoIncrementFlag(true);
+        }
+
+        if (std::find(parameters.begin(), parameters.end(), "NULL") != parameters.end()) {
+            columns_[column]->SetNotNullFlag(true);
+        }
+
+        auto default_val_iter = std::find_if(parameters.begin(), parameters.end(), [](const std::string& val) {
+            return val.starts_with("DEFAULT");
+        });
+
+        if (default_val_iter != parameters.end()) {
+            std::string default_val = split(*default_val_iter, '(')[1];
+            default_val.erase(default_val.end() - 1);
+            columns_[column]->SetDefault(default_val);
+        }
     }
 
     for (auto& [column, type] : sql.GetData()) {
@@ -53,7 +71,6 @@ void Table::InsertRow(const SqlQuery& sql) {
         } else {
             column->AddDefault();
         }
-        ////
     }
 }
 
